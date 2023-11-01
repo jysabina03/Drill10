@@ -1,9 +1,8 @@
 # 이것은 각 상태들을 객체로 구현한 것임.
 
 from pico2d import get_time, load_image, SDL_KEYDOWN, SDL_KEYUP, SDLK_SPACE, SDLK_LEFT, SDLK_RIGHT
-
+from ball import Ball, BigBall
 import game_world
-from ball import Ball
 
 # state event check
 # ( state event type, event value )
@@ -23,16 +22,14 @@ def left_down(e):
 def left_up(e):
     return e[0] == 'INPUT' and e[1].type == SDL_KEYUP and e[1].key == SDLK_LEFT
 
-
 def space_down(e):
     return e[0] == 'INPUT' and e[1].type == SDL_KEYDOWN and e[1].key == SDLK_SPACE
-
 
 def time_out(e):
     return e[0] == 'TIME_OUT'
 
-
 # time_out = lambda e : e[0] == 'TIME_OUT'
+
 
 
 class Idle:
@@ -45,7 +42,7 @@ class Idle:
             boy.action = 3
         boy.dir = 0
         boy.frame = 0
-        boy.wait_time = get_time()  # pico2d import 필요
+        boy.wait_time = get_time() # pico2d import 필요
         pass
 
     @staticmethod
@@ -65,30 +62,33 @@ class Idle:
         boy.image.clip_draw(boy.frame * 100, boy.action * 100, 100, 100, boy.x, boy.y)
 
 
+
 class Run:
 
     @staticmethod
     def enter(boy, e):
-        if right_down(e) or left_up(e):  # 오른쪽으로 RUN
-            boy.dir, boy.face_dir, boy.action = 1, 1, 1
-        elif left_down(e) or right_up(e):  # 왼쪽으로 RUN
-            boy.dir, boy.face_dir, boy.action = -1, -1, 0
+        if right_down(e) or left_up(e): # 오른쪽으로 RUN
+            boy.dir, boy.action, boy.face_dir = 1, 1, 1
+        elif left_down(e) or right_up(e): # 왼쪽으로 RUN
+            boy.dir, boy.action, boy.face_dir = -1, 0, -1
 
     @staticmethod
     def exit(boy, e):
         if space_down(e):
             boy.fire_ball()
+
         pass
 
     @staticmethod
     def do(boy):
         boy.frame = (boy.frame + 1) % 8
-        boy.x += boy.dir * 5
+        boy.x += boy.dir * 1
         pass
 
     @staticmethod
     def draw(boy):
         boy.image.clip_draw(boy.frame * 100, boy.action * 100, 100, 100, boy.x, boy.y)
+
 
 
 class Sleep:
@@ -146,16 +146,36 @@ class StateMachine:
         self.cur_state.draw(self.boy)
 
 
+
+
+
 class Boy:
     def __init__(self):
-        self.x, self.y = 400, 70
+        self.x, self.y = 400, 90
         self.frame = 0
-        self.action = 3  # 오른쪽 idle
+        self.action = 3
+        self.face_dir = 1
         self.dir = 0
-        self.face_dir = 1  # 오른쪾 방향
         self.image = load_image('animation_sheet.png')
         self.state_machine = StateMachine(self)
         self.state_machine.start()
+        self.item = None
+
+    def fire_ball(self):
+        if self.item == 'Ball':
+            ball = Ball(self.x, self.y, self.face_dir*2)
+            game_world.add_object(ball)
+        elif self.item == 'BigBall':
+            ball = BigBall(self.x, self.y, self.face_dir * 2)
+            game_world.add_object(ball)
+
+        # if self.face_dir == -1:
+        #     print('FIRE BALL LEFT')
+        #
+        # elif self.face_dir == 1:
+        #     print('FIRE BALL RIGHT')
+
+        pass
 
     def update(self):
         self.state_machine.update()
@@ -165,12 +185,3 @@ class Boy:
 
     def draw(self):
         self.state_machine.draw()
-
-    def fire_ball(self):
-        ball = Ball(self.x,self.y,self.face_dir*8)
-        game_world.add_object(ball,1)
-        # 생성한 볼을 월드에 넣어줘야 한다.
-        if self.face_dir == 1:
-            print("FIRE BALL to Right")
-        if self.face_dir == -1:
-            print("FIRE BALL to Left")
